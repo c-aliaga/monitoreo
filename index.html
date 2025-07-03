@@ -251,7 +251,7 @@
       const remaining = [];
       for (const item of stored) {
         try {
-          await fetch('https://script.google.com/macros/s/AKfycbyxeJgsPpMxg2CR6OYBA_QysloDQTOGyGN44EFP_PMNmGrEdTDUmiUhKPFPSdACGzKAnA/exec', {
+          await fetch('https://eop5k4d4mrwvl3m.m.pipedream.net', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(item)
@@ -297,7 +297,7 @@
           lon: coords.longitude,
           accuracy: coords.accuracy
         };
-        fetch('https://script.google.com/macros/s/AKfycbyxeJgsPpMxg2CR6OYBA_QysloDQTOGyGN44EFP_PMNmGrEdTDUmiUhKPFPSdACGzKAnA/exec', {
+        fetch('https://eop5k4d4mrwvl3m.m.pipedream.net', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
