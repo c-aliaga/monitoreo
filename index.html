@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Monitoreo de posición GPS</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#007BFF" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 10px;
+    }
+    h1 {
+      font-size: 1.6em;
+      text-align: center;
+      margin-top: 10px;
+      margin-bottom: 4px;
+    }
+    h2 {
+      font-size: 1em;
+      text-align: center;
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .form-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .form-group {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 140px;
+    }
+    .form-group.full-width {
+      flex: 100%;
+    }
+    label {
+      font-size: 0.9em;
+      margin: 6px 0 4px;
+    }
+    #celular, #dni {
+      margin-top: 1px;
+    }
+    #apellidos, #nombres {
+      margin-top: 4px;
+    }
+    #comentarios {
+      margin-top: 2px;
+    }
+    .form-group.placa-group {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+    .form-group.boton-group {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      margin-top: 6px;
+    }
+    input, select, textarea, button {
+      font-size: 1em;
+      padding: 6px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #007BFF;
+      color: white;
+      border: none;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+    .divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 15px 0 5px;
+    }
+    .divider::before, .divider::after {
+      content: "";
+      flex: 1;
+      border-bottom: 1px solid #ccc;
+    }
+    .divider:not(:empty)::before {
+      margin-right: .5em;
+    }
+    .divider:not(:empty)::after {
+      margin-left: .5em;
+    }
+    .hidden {
+      display: none;
+    }
+    #map {
+      height: 300px;
+      margin-top: 10px;
+    }
+    #progressBar {
+      width: 100%;
+      background: #eee;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+    #progressBarFill {
+      height: 20px;
+      width: 0%;
+      background: green;
+      color: white;
+      text-align: center;
+      line-height: 20px;
+    }
+    .log {
+      font-size: 0.9em;
+      white-space: pre-wrap;
+      margin-top: 10px;
+      background: #f4f4f4;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    @media (max-width: 768px) {
+      .form-row {
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+      .form-group {
+        flex: 0 0 48%;
+      }
+      .form-group.full-width {
+        flex: 0 0 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="formScreen">
+      <h1>Monitoreo de posición GPS</h1>
+      <h2>Prototipo elaborado por Carlos Aliaga</h2>
+      <p style="text-align: center; font-size: 0.6em; margin: 0 10px 10px;">
+        Este prototipo permite recibir durante 10 minutos la información de la posición del celular del conductor.
+        El conductor remite voluntariamente esta información a fin de que se monitoree su recorrido y declara que
+        la información enviada y la información monitoreada tiene carácter público.
+      </p>
+      <form id="gpsForm">
+        <div class="form-row">
+          <div class="form-group placa-group">
+            <label for="placa">Placa</label>
+            <input type="text" id="placa" name="placa" required />
+          </div>
+          <div class="form-group boton-group">
+            <label>&nbsp;</label>
+            <button type="button" onclick="toggleOpcionales()">Mostrar campos opcionales</button>
+          </div>
+        </div>
+        <div id="opcionalFields" class="hidden">
+          <div class="divider">Datos opcionales del conductor</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="nombres">Nombres</label>
+              <input type="text" id="nombres" name="nombres" />
+            </div>
+            <div class="form-group">
+              <label for="apellidos">Apellidos</label>
+              <input type="text" id="apellidos" name="apellidos" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="dni">DNI</label>
+              <input type="text" inputmode="numeric" pattern="\d*" id="dni" name="dni" />
+            </div>
+            <div class="form-group">
+              <label for="celular">Celular</label>
+              <input type="tel" id="celular" name="celular" />
+            </div>
+          </div>
+          <div class="divider">Otros datos opcionales</div>
+          <div class="form-row">
+            <div class="form-group full-width">
+              <label for="carga">Tipo de carga transportada</label>
+              <select id="carga" name="carga">
+                <option value="">Seleccione una opción</option>
+                <option value="Contenedor">Contenedor</option>
+                <option value="Fraccionada">Fraccionada</option>
+                <option value="Granel sólido">Granel sólido</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group full-width">
+              <label for="comentarios">Comentarios</label>
+              <textarea id="comentarios" name="comentarios"></textarea>
+            </div>
+          </div>
+        </div>
+        <button type="submit">Iniciar monitoreo</button>
+      </form>
+      <div id="map" class="hidden"></div>
+      <div id="progressBar" class="hidden"><div id="progressBarFill">0%</div></div>
+      <div id="log" class="log hidden"></div>
+    </div>
+  </div>
+  <script>
+    const form = document.getElementById('gpsForm');
+    const opcionalFields = document.getElementById('opcionalFields');
+    const logDiv = document.getElementById('log');
+    const mapDiv = document.getElementById('map');
+    const progressBar = document.getElementById('progressBar');
+    const progressBarFill = document.getElementById('progressBarFill');
+    let map, marker;
+
+    const STORAGE_KEY = 'gpsOfflineBuffer';
+
+    function toggleOpcionales() {
+      opcionalFields.classList.toggle('hidden');
+    }
+
+    function saveToLocal(payload) {
+      const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      existing.push(payload);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+    }
+
+    async function resendStored() {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      if (stored.length === 0) return;
+      const remaining = [];
+      for (const item of stored) {
+        try {
+          await fetch('https://eop5k4d4mrwvl3m.m.pipedream.net', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(item)
+          });
+        } catch (e) {
+          remaining.push(item);
+        }
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(remaining));
+    }
+
+    window.addEventListener('focus', resendStored);
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(form).entries());
+      document.getElementById('formScreen').scrollIntoView();
+      form.classList.add('hidden');
+      mapDiv.classList.remove('hidden');
+      logDiv.classList.remove('hidden');
+      progressBar.classList.remove('hidden');
+
+      map = L.map('map').setView([-12.0464, -77.0428], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
+
+      let count = 0;
+      const total = 10;
+      const interval = 60000;
+
+      const updateProgress = () => {
+        const percent = Math.round(((count + 1) / total) * 100);
+        progressBarFill.style.width = percent + '%';
+        progressBarFill.textContent = percent + '%';
+      };
+
+      const sendData = (coords) => {
+        const payload = {
+          ...data,
+          timestamp: new Date().toISOString(),
+          lat: coords.latitude,
+          lon: coords.longitude,
+          accuracy: coords.accuracy
+        };
+        fetch('https://eop5k4d4mrwvl3m.m.pipedream.net', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).catch(() => saveToLocal(payload));
+
+        const msg = `[${new Date().toLocaleTimeString()}] Lat: ${coords.latitude.toFixed(5)}, Lon: ${coords.longitude.toFixed(5)}, ±${coords.accuracy}m`;
+        logDiv.textContent += msg + '\n';
+
+        if (!marker) {
+          marker = L.marker([coords.latitude, coords.longitude]).addTo(map);
+        } else {
+          marker.setLatLng([coords.latitude, coords.longitude]);
+        }
+        map.setView([coords.latitude, coords.longitude], 15);
+      };
+
+      const trackPosition = () => {
+        if (count >= total) return;
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            sendData(pos.coords);
+            updateProgress();
+            count++;
+            if (count < total) setTimeout(trackPosition, interval);
+          },
+          (err) => {
+            logDiv.textContent += `[${new Date().toLocaleTimeString()}] Error obteniendo posición: ${err.message}\n`;
+            if (count < total) setTimeout(trackPosition, interval);
+          },
+          { enableHighAccuracy: true, timeout: 10000 }
+        );
+      };
+
+      trackPosition();
+    });
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').then(reg => {
+        console.log('Service worker registrado:', reg);
+      }).catch(err => {
+        console.error('Error registrando SW:', err);
+      });
+    }
+  </script>
+</body>
+</html>
